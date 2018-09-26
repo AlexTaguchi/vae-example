@@ -12,6 +12,7 @@ from torchvision.utils import save_image
 
 # Parameters
 batchSize = 32
+conditionalVector = True
 conditionalSize = 10
 epochs = 50
 hiddenSize = 400
@@ -71,7 +72,10 @@ class CVAE(nn.Module):
 
 
 # Instantiate neural network
-net = CVAE(conditionalSize, hiddenSize, latentSize).to(device)
+if conditionalVector:
+    net = CVAE(conditionalSize, hiddenSize, latentSize).to(device)
+else:
+    net = CVAE(1, hiddenSize, latentSize).to(device)
 
 # Optimizer
 optimizer = torch.optim.Adam(net.parameters(), lr=1e-3)
@@ -108,7 +112,10 @@ def network_training(n):
     train_loss = 0
     for i, (data, labels) in enumerate(train_loader):
         data = data.to(device)
-        labels = one_hot(labels, 10).to(device)
+        if conditionalVector:
+            labels = one_hot(labels, 10).to(device)
+        else:
+            labels = labels.float().view(-1, 1).to(device)
         optimizer.zero_grad()
         recon_batch, mu, logvar = net(data, labels)
         loss = loss_function(recon_batch, data, mu, logvar)
@@ -130,7 +137,10 @@ def network_testing(n):
     with torch.no_grad():
         for i, (data, labels) in enumerate(test_loader):
             data = data.to(device)
-            labels = one_hot(labels, 10).to(device)
+            if conditionalVector:
+                labels = one_hot(labels, 10).to(device)
+            else:
+                labels = labels.float().view(-1, 1).to(device)
             recon_batch, mu, logvar = net(data, labels)
             test_loss += loss_function(recon_batch, data, mu, logvar).item()
             if i == 0:
@@ -148,7 +158,10 @@ for epoch in range(1, epochs+1):
     network_training(epoch)
     network_testing(epoch)
     with torch.no_grad():
-        c_test = torch.eye(10, 10).to(device)
+        if conditionalVector:
+            c_test = torch.eye(10, 10).to(device)
+        else:
+            c_test = torch.Tensor(10, 1).random_(0, 10).to(device)
         z_test = torch.randn(10, 20).to(device)
         samples = net.decode(z_test, c_test)
         save_image(samples.view(10, 1, 28, 28),
