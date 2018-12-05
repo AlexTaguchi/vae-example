@@ -1,4 +1,4 @@
-# VAE/CVAE Tutorial
+# vae-example
 Simple VAE/CVAE neural network examples to generate MNIST images
 
 CVAE
